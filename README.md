@@ -13,7 +13,7 @@ Commissioning works with Google Matter Controllers (e.g. Google Nest) as well as
 
 ### Prerequisites
 
-An rp2040 board connected to a WL5500 ethernet adapter. Look at the source w.r.t. which pins need to be connected
+An rp2040 board connected to a WL5500 ethernet adapter. Look at the source w.r.t. which pins need to be connected.
 
 ### Build
 
@@ -22,7 +22,7 @@ An rp2040 board connected to a WL5500 ethernet adapter. Look at the source w.r.t
 
 ### Flash (with elf2uf2-rs)
 
-* Install the `elf2uf2-rs` utility if you don't have it: `cargo install elf2uf2-rs` -d rp-matter`
+* Install the `elf2uf2-rs` utility if you don't have it: `cargo install elf2uf2-rs -d rp-matter`
 * Set your rp2040 board in USB flash mode and then run `elf2uf2-rs -d target/thumbv6m-none-eabi/debug/rp-matter`
 
 ### Run
