@@ -120,8 +120,7 @@ async fn main(mut spawner: Spawner) {
     run_matter(
         stack,
         Ipv4Addr::from(local_addr.0),
-        //Ipv6Addr::from(local_addr_v6.0),
-        None,
+        Some(Ipv6Addr::from(local_addr_v6.0)),
     )
     .await
     .unwrap();
