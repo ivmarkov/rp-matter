@@ -127,8 +127,6 @@ async fn run_matter(
     ipv4_addr: Ipv4Addr,
     ipv6_addr: Option<Ipv6Addr>,
 ) -> Result<(), Error> {
-    //initialize_logger();
-
     info!(
         "Matter required memory: mDNS={}, Matter={}, TransportRunner={}, UdpBuffers={}",
         core::mem::size_of::<MdnsService>(),
@@ -226,6 +224,7 @@ fn handler<'a>(matter: &'a Matter<'a>) -> impl Metadata + NonBlockingHandler + '
     )
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn create_ethernet_device(
     spi1: SPI1,
     dma0: DMA_CH0,
@@ -292,7 +291,7 @@ async fn create_ip_stack(
     ));
 
     // Launch
-    spawner.spawn(net_task(&stack)).unwrap();
+    spawner.spawn(net_task(stack)).unwrap();
 
     stack
 }
