@@ -30,10 +30,10 @@ use matter::data_model::objects::*;
 use matter::data_model::root_endpoint;
 use matter::data_model::system_model::descriptor;
 use matter::error::Error;
-use matter::mdns::MdnsService;
+use matter::mdns::{MdnsRunBuffers, MdnsService};
 use matter::secure_channel::spake2p::VerifierData;
+use matter::transport::core::RunBuffers;
 use matter::transport::network::{Ipv4Addr, Ipv6Addr};
-use matter::transport::runner::{AllUdpBuffers, TransportRunner};
 
 use rand::RngCore;
 use smoltcp::wire::{Ipv6Address, Ipv6Cidr};
@@ -58,21 +58,6 @@ type W5500Runner = Runner<
 
 #[global_allocator]
 static HEAP: Heap = Heap::empty();
-
-#[embassy_executor::task]
-async fn logger_task(driver: Driver<'static, USB>) {
-    embassy_usb_logger::run!(1024, log::LevelFilter::Info, driver);
-}
-
-#[embassy_executor::task]
-async fn ethernet_task(runner: W5500Runner) -> ! {
-    runner.run().await
-}
-
-#[embassy_executor::task]
-async fn net_task(stack: &'static Stack<Device<'static>>) -> ! {
-    stack.run().await
-}
 
 #[embassy_executor::main]
 async fn main(mut spawner: Spawner) {
@@ -117,6 +102,7 @@ async fn main(mut spawner: Spawner) {
         stack,
         Ipv4Addr::from(local_addr.0),
         Some(Ipv6Addr::from(local_addr_v6.0)),
+        &mut spawner,
     )
     .await
     .unwrap();
@@ -126,13 +112,14 @@ async fn run_matter(
     stack: &'static Stack<Device<'static>>,
     ipv4_addr: Ipv4Addr,
     ipv6_addr: Option<Ipv6Addr>,
+    spawner: &mut Spawner,
 ) -> Result<(), Error> {
     info!(
-        "Matter required memory: mDNS={}, Matter={}, TransportRunner={}, UdpBuffers={}",
+        "Matter memory: mDNS={}, Matter={}, MdnsBuffers={}, RunBuffers={}",
         core::mem::size_of::<MdnsService>(),
         core::mem::size_of::<Matter>(),
-        core::mem::size_of::<TransportRunner>(),
-        core::mem::size_of::<AllUdpBuffers>(),
+        core::mem::size_of::<MdnsRunBuffers>(),
+        core::mem::size_of::<RunBuffers>(),
     );
 
     let dev_det = &*make_static!(BasicInfoConfig {
@@ -156,7 +143,9 @@ async fn run_matter(
         matter::MATTER_PORT,
     ));
 
-    let matter = &*make_static!(Matter::new(
+    info!("mDNS initialized");
+
+    let matter: &Matter<'static> = &*make_static!(Matter::new(
         // vid/pid should match those in the DAC
         dev_det,
         dev_att,
@@ -166,33 +155,50 @@ async fn run_matter(
         matter::MATTER_PORT,
     ));
 
-    let runner = make_static!(TransportRunner::new(matter));
+    info!("Matter initialized, starting...");
+
+    spawner
+        .spawn(mdns_task(mdns, stack, make_static!(MdnsRunBuffers::new())))
+        .unwrap();
 
     let handler = &*make_static!(HandlerCompat(handler(matter)));
 
-    let buffers = make_static!(AllUdpBuffers::new());
+    matter
+        .run(
+            stack,
+            make_static!(RunBuffers::new()),
+            CommissioningData {
+                // TODO: Hard-coded for now
+                verifier: VerifierData::new_with_pw(123456, *matter.borrow()),
+                discriminator: 250,
+            },
+            handler,
+        )
+        .await
+}
 
-    let fut = runner.run_udp_all(
-        stack,
-        mdns,
-        buffers,
-        CommissioningData {
-            // TODO: Hard-coded for now
-            verifier: VerifierData::new_with_pw(123456, *matter.borrow()),
-            discriminator: 250,
-        },
-        handler,
-    );
+#[embassy_executor::task]
+async fn mdns_task(
+    mdns: &'static MdnsService<'static>,
+    stack: &'static Stack<Device<'static>>,
+    buffers: &'static mut MdnsRunBuffers,
+) {
+    mdns.run(stack, buffers).await.unwrap();
+}
 
-    info!(
-        "Future initialized, memory size={}",
-        core::mem::size_of_val(&fut)
-    );
-    info!("Starting Matter...");
+#[embassy_executor::task]
+async fn logger_task(driver: Driver<'static, USB>) {
+    embassy_usb_logger::run!(1024, log::LevelFilter::Info, driver);
+}
 
-    fut.await?;
+#[embassy_executor::task]
+async fn ethernet_task(runner: W5500Runner) -> ! {
+    runner.run().await
+}
 
-    Ok(())
+#[embassy_executor::task]
+async fn net_task(stack: &'static Stack<Device<'static>>) -> ! {
+    stack.run().await
 }
 
 const NODE: Node<'static> = Node {
@@ -207,7 +213,7 @@ const NODE: Node<'static> = Node {
     ],
 };
 
-fn handler<'a>(matter: &'a Matter<'a>) -> impl Metadata + NonBlockingHandler + 'a {
+fn handler(matter: &'static Matter<'static>) -> impl Metadata + NonBlockingHandler + 'static {
     (
         NODE,
         root_endpoint::handler(0, matter)
