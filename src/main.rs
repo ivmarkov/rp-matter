@@ -22,18 +22,18 @@ use embedded_hal_async::spi::ExclusiveDevice;
 
 use log::{error, info};
 
-use matter::core::{CommissioningData, Matter};
-use matter::data_model::cluster_basic_information::BasicInfoConfig;
-use matter::data_model::cluster_on_off;
-use matter::data_model::device_types::DEV_TYPE_ON_OFF_LIGHT;
-use matter::data_model::objects::*;
-use matter::data_model::root_endpoint;
-use matter::data_model::system_model::descriptor;
-use matter::error::Error;
-use matter::mdns::{MdnsRunBuffers, MdnsService};
-use matter::secure_channel::spake2p::VerifierData;
-use matter::transport::core::RunBuffers;
-use matter::transport::network::{Ipv4Addr, Ipv6Addr};
+use rs_matter::core::{CommissioningData, Matter};
+use rs_matter::data_model::cluster_basic_information::BasicInfoConfig;
+use rs_matter::data_model::cluster_on_off;
+use rs_matter::data_model::device_types::DEV_TYPE_ON_OFF_LIGHT;
+use rs_matter::data_model::objects::*;
+use rs_matter::data_model::root_endpoint;
+use rs_matter::data_model::system_model::descriptor;
+use rs_matter::error::Error;
+use rs_matter::mdns::{MdnsRunBuffers, MdnsService};
+use rs_matter::secure_channel::spake2p::VerifierData;
+use rs_matter::transport::core::RunBuffers;
+use rs_matter::transport::network::{Ipv4Addr, Ipv6Addr};
 
 use rand::RngCore;
 use smoltcp::wire::{Ipv6Address, Ipv6Cidr};
@@ -140,7 +140,7 @@ async fn run_matter(
         ipv4_addr.octets(),
         ipv6_addr.map(|ip| (ip.octets(), 0)),
         dev_det,
-        matter::MATTER_PORT,
+        rs_matter::MATTER_PORT,
     ));
 
     info!("mDNS initialized");
@@ -152,7 +152,7 @@ async fn run_matter(
         mdns,
         epoch,
         rand,
-        matter::MATTER_PORT,
+        rs_matter::MATTER_PORT,
     ));
 
     info!("Matter initialized, starting...");

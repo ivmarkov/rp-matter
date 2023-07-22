@@ -20,7 +20,7 @@ embassy-net-driver = { git = "https://github.com/embassy-rs/embassy" }
 embassy-net-w5500 = { git = "https://github.com/embassy-rs/embassy" }
 
 [dependencies]
-matter = { package = "matter-iot", git = "https://github.com/project-chip/matter-rs", default-features = false, features = ["rustcrypto", "embassy-net"] }
+rs-matter = { git = "https://github.com/project-chip/matter-rs", default-features = false, features = ["rustcrypto", "embassy-net"] }
 embassy-embedded-hal = { version = "0.1", features = [] }
 embassy-rp = { version = "0.1", features = ["unstable-traits", "nightly", "unstable-pac", "time-driver", "critical-section-impl"] }
 embassy-usb = { version = "0.1" }
